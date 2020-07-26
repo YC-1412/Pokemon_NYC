@@ -1,4 +1,0 @@
-name: "Pokémon in NYC"
-output:
-html_document:
- includes: index.html
