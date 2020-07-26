@@ -21,7 +21,7 @@ This document includes 2 part of work:
 
 The interactive map enables viewers to zoom in and check the Pokémon ID, name, type, appear time, and location information.
 
-Codes for this demo are all hiden.
+*Codes for the demo can be find [here](https://github.com/Yingyu-Cao/Pokemon_NYC)*
 
 ## 1. Data
 The data used in this demo comes from 2 Kaggle dataset:
@@ -55,11 +55,13 @@ The original data contains 3-day spatial information of Pokémon showing up all 
 
 * combine two datasets based on the Pokémon ID
 ```{r}
+# preselect a small region around New York, because the for loop for maping lat and lng to states takes long
+# convert time to machine-readable format
+
 # location of NY (roughly)
-# loc = c(40.71,-74.01)
-# r = c(0.11,0.02)
-loc = c(40.7,-73.9)
-r = c(0.3,0.4)
+loc = c(40.7,-73.9)   # center
+r = c(0.3,0.4)        # radius
+
 
 dat <- dat %>% 
   mutate('appear_intvl' = (.$encounter_ms-.$disppear_ms)/60000,
@@ -77,17 +79,13 @@ dat <- dat %>%
 ```
 
 ```{r}
+# read in usa state map information
 usa <- geojson_read(
   "http://eric.clst.org/assets/wiki/uploads/Stuff/gz_2010_us_040_00_500k.json",
   what = "sp"
 )
-# usa <- geojson_read(
-#   "https://eric.clst.org/assets/wiki/uploads/Stuff/gz_2010_us_500_11_20m.json", 
-#   what = "sp"
-# )
 
-
-# compare points
+# map state info to each point by its lat and lng
 for (i in 1:nrow(dat)) {
   coords <- c(dat$lng[i], dat$lat[i])
   if(any(is.na(coords))) next
@@ -102,15 +100,19 @@ for (i in 1:nrow(dat)) {
   dat$state[i] <- as.character(polygon_check$NAME)
 }
 
-
+# select points only in NY
 dat <- dat %>% filter(state == 'New York')
 ```
 
 ```{r}
+# get pokemon type info from pogo dataset
 dat2 <- dat2 %>% 
   mutate('num' = Pokedex) %>% 
   select(num,Primary)
 
+# compute rarity and average appearing time
+# combine location dataset with pogo dataset
+# rarity calculation: sum up all the appearing time all over NY. <30mins: rare, 30-60mins: uncommon, 60mins: common
 dat <- dat %>% group_by(num,name,lat,lng) %>% 
   summarise('ave_appear_time' = sum(appear_intvl)/n(),
             'total_appear_time'= sum(appear_intvl)) %>% 
@@ -121,46 +123,19 @@ dat <- dat %>% group_by(num,name,lat,lng) %>%
   left_join(dat2,by='num')
 ```
 
-```{r}
-# # create breaks
-# breaks <- hour(hm("12:00", "13:00", "14:00", "15:00", "16:00"))
-# # labels for the breaks
-# labels <- c("12:00-13:00", "13:00-14:00", "14:00-15:00", "15:00-16:00")
-#   
-# dat <- dat %>% mutate('appear_time2' = cut(x=hour(.$appear_time), 
-#                                            breaks = breaks, 
-#                                            labels = labels, 
-#                                            include.lowest=TRUE)) %>% 
-#   group_by(num,name,appear_time2,lat,lng) %>% 
-#   summarise('ave_appear_time' = sum(appear_intvl)/n()) %>% 
-#   filter(ave_appear_time>3)
-
-```
-
 ## 3. Visualization
 The map contains 1311 points, showing where each Pokémon appeared from 2:00 pm to 2:30 pm, from July 26, 2016 to July 28, 2016. Each wild Pokémon encountered is a particular point, with the size and color of the point represent how long a Pokémon appeared on average and its type. 
-```{r}
-# library(maptools)
-# library(maps)
-
-# mapWorld <- borders("state", colour="gray50", fill="white")
-# register_google(key = "AIzaSyBPwH5XIOe2yvySzbzLWUuLYDDfVr-7UNo")
-# mymap <- get_map(location = c(lon = -74.00, lat = 40.77), zoom = 12, maptype = "roadmap")
-# mymap <- ggmap(mymap)+
-#   geom_point(data = dat, 
-#              aes(x = lng, y = lat, 
-#                  alpha = ave_appear_time, 
-#                  col = appear_time2))
-```
 
 ```{r}
 library(plotly)
 library(RColorBrewer)
-Sys.setenv("MAPBOX_TOKEN" = 
-             'pk.eyJ1IjoieXVyaWlpaSIsImEiOiJja2QyN3MxOW0wZzFyMndueWR4b2l3cnpnIn0.9BcXtfA3YWLSTXGV-3QxHw') # for Orca
+
+# here for more info https://docs.mapbox.com/help/how-mapbox-works/access-tokens/
+# Sys.setenv("MAPBOX_TOKEN" = 'personal token') # for Orca
 
 mycolors = c(brewer.pal(name="Set1", n = 9), brewer.pal(name="Accent", n = 5))
 
+# sizeref: smaller, larger points
 fig <- dat %>% plot_ly(lat = ~lat,
                        lon = ~lng,
                        marker = list(size = ~ave_appear_time,
@@ -177,6 +152,8 @@ fig <- dat %>% plot_ly(lat = ~lat,
                                          '</br> Appear time:',
                                          round(ave_appear_time,digits = 0),'mins',
                                          '</br> Location:',lng,'°,',lat,'°'))
+# center: make sure the map shows all the points when being loaded
+# zoom: larger, more details
 fig <- fig %>%
   layout(
     mapbox = list(
@@ -189,49 +166,5 @@ fig <- fig %>%
 fig
 ```
 
-```{r include=FALSE}
-# library(sf)
-# library(spData)
-# 
-# ## pointsDF: A data.frame whose first column contains longitudes and
-# ##           whose second column contains latitudes.
-# ##
-# ## states:   An sf MULTIPOLYGON object with 50 states plus DC.
-# ##
-# ## name_col: Name of a column in `states` that supplies the states'
-# ##           names.
-# lonlat_to_state <- function(pointsDF,
-#                             states = spData::us_states,
-#                             name_col = "NAME") {
-#     ## Convert points data.frame to an sf POINTS object
-#     pts <- st_as_sf(pointsDF, coords = 1:2, crs = 4326)
-# 
-#     ## Transform spatial data to some planar coordinate system
-#     ## (e.g. Web Mercator) as required for geometric operations
-#     states <- st_transform(states, crs = 3857)
-#     pts <- st_transform(pts, crs = 3857)
-# 
-#     ## Find names of state (if any) intersected by each point
-#     state_names <- states[[name_col]]
-#     ii <- as.integer(st_intersects(pts, states))
-#     state_names[ii]
-# }
-# 
-# testPoints <- data.frame(x = c(-90, -120, 0), y = c(44, 44, 44))
-# lonlat_to_state(testPoints)
-# 
-# write_csv(dat,'test.csv')
-# dat <- read_csv('test.csv')
-# 
-# test <- dat %>% group_by(num,name,lat,lng) %>% 
-#   summarise('ave_appear_time' = sum(appear_intvl)/n(),
-#             'total_appear_time'= sum(appear_intvl))
-# test <-  test[1:round(nrow(test)),c('lng','lat')]
-# pts <- st_as_sf(test, coords = 1:2, crs = 4326)
-# states = spData::us_states
-# states <- st_transform(states, crs = 3857)
-
-# lonlat_to_state(data.frame(x = dat$lng,y = dat$lat))
-```
 
 
