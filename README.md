@@ -1,6 +1,6 @@
 # Pokemon_NYC
 
-This demo includes 2 part of work: 
+This [demo](https://yingyu-cao.github.io/Pokemon_NYC/) includes 2 part of work: 
 
 * data cleaning 
 
