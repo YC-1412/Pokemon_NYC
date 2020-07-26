@@ -1,3 +1,9 @@
+# Pokémon in NYC
+# Author: Yingyu Cao
+# data scources:
+#   https://www.kaggle.com/kveykva/sf-bay-area-pokemon-go-spawns
+#   https://www.kaggle.com/netzuel/pokmon-go-dataset-15-generations
+
 ## ----read data-------------------------------------------------------------------------------------
 library(ggplot2)
 library(dplyr)
