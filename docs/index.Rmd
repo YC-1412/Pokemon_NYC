@@ -1,6 +1,6 @@
 ---
 title: "Pokémon in NYC"
-author: "Yingyu Cao"
+author: "YC"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 ---
 
