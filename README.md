@@ -1,6 +1,6 @@
 # Pokemon_NYC
 
-This [demo](https://github.com/YC-1412/Pokemon_NYC) includes 2 part of work: 
+This [demo](https://yc-1412.github.io/Pokemon_NYC/) includes 2 part of work: 
 
 * data cleaning 
 
